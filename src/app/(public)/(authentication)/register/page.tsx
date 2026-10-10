@@ -25,13 +25,29 @@ export default function RegisterPage() {
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [role, setRole] = React.useState<"CUSTOMER" | "TECHNICIAN">("CUSTOMER");
+  const [skillsText, setSkillsText] = React.useState("HVAC, Electrical, General Repair");
+  const [hourlyRate, setHourlyRate] = React.useState("45");
   const [showPassword, setShowPassword] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const payload = { name, email, password, phone };
+    const parsedSkills = role === "TECHNICIAN"
+      ? skillsText.split(",").map((s) => s.trim()).filter(Boolean)
+      : undefined;
+
+    const payload: any = {
+      name,
+      email,
+      password,
+      phone: phone || undefined,
+      role,
+      skills: parsedSkills,
+      hourlyRate: role === "TECHNICIAN" ? Number(hourlyRate) || 45 : undefined,
+    };
+
     const validation = registerSchema.safeParse(payload);
     if (!validation.success) {
       const fieldErrors: Record<string, string> = {};
@@ -50,7 +66,11 @@ export default function RegisterPage() {
         setStoredUser(user);
         toast.success(`Account created! Welcome, ${user.name}`);
         await refreshUser();
-        router.push("/dashboard");
+        if (user.role === "TECHNICIAN") {
+          router.push("/provider");
+        } else {
+          router.push("/dashboard");
+        }
       },
       onError: (err: any) => {
         toast.error(err.message || "Failed to register account");
@@ -84,6 +104,37 @@ export default function RegisterPage() {
           <CardContent className="p-6 space-y-5">
             <form onSubmit={handleSubmit} className="space-y-4">
               <FieldGroup>
+                {/* Account Role Selector */}
+                <div className="space-y-1.5">
+                  <FieldLabel>Account Type</FieldLabel>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setRole("CUSTOMER")}
+                      className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition-all ${
+                        role === "CUSTOMER"
+                          ? "border-primary bg-primary/10 text-primary shadow-xs"
+                          : "border-border/70 bg-card text-muted-foreground hover:bg-muted/40"
+                      }`}
+                    >
+                      <User className="size-4" />
+                      <span>Customer</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRole("TECHNICIAN")}
+                      className={`flex items-center justify-center gap-2 rounded-xl border p-2.5 text-xs font-semibold transition-all ${
+                        role === "TECHNICIAN"
+                          ? "border-primary bg-primary/10 text-primary shadow-xs"
+                          : "border-border/70 bg-card text-muted-foreground hover:bg-muted/40"
+                      }`}
+                    >
+                      <Wrench className="size-4" />
+                      <span>Field Technician</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Full Name */}
                 <Field data-invalid={!!errors.name}>
                   <FieldLabel htmlFor="regName">Full Name</FieldLabel>
@@ -133,6 +184,32 @@ export default function RegisterPage() {
                   <FieldError error={errors.phone} />
                 </Field>
 
+                {/* Technician Specific Fields */}
+                {role === "TECHNICIAN" && (
+                  <>
+                    <Field>
+                      <FieldLabel htmlFor="regSkills">Technical Skills (Comma separated)</FieldLabel>
+                      <Input
+                        id="regSkills"
+                        placeholder="e.g. HVAC, Electrical Wiring, Plumbing"
+                        value={skillsText}
+                        onChange={(e) => setSkillsText(e.target.value)}
+                      />
+                    </Field>
+
+                    <Field>
+                      <FieldLabel htmlFor="regRate">Hourly Rate ($/hr)</FieldLabel>
+                      <Input
+                        id="regRate"
+                        type="number"
+                        placeholder="45"
+                        value={hourlyRate}
+                        onChange={(e) => setHourlyRate(e.target.value)}
+                      />
+                    </Field>
+                  </>
+                )}
+
                 {/* Password */}
                 <Field data-invalid={!!errors.password}>
                   <FieldLabel htmlFor="regPassword">Password</FieldLabel>
@@ -158,7 +235,7 @@ export default function RegisterPage() {
                 </Field>
 
                 <Button type="submit" isLoading={isPending} className="w-full gap-2 mt-2">
-                  <span>Register Customer Account</span>
+                  <span>{role === "TECHNICIAN" ? "Register as Field Technician" : "Create Customer Account"}</span>
                   <ArrowRight className="size-4" />
                 </Button>
               </FieldGroup>

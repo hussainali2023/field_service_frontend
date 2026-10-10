@@ -21,6 +21,41 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Attempt backend Multer & Cloudinary upload first
+    const backendApi =
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      "https://field-service-backend-mu.vercel.app/api/v1";
+    try {
+      const backendFormData = new FormData();
+      backendFormData.append("file", file);
+
+      const authHeader = req.headers.get("authorization");
+      const backendRes = await fetch(`${backendApi}/upload/single`, {
+        method: "POST",
+        body: backendFormData,
+        headers: authHeader ? { Authorization: authHeader } : undefined,
+      });
+
+      if (backendRes.ok) {
+        const json = await backendRes.json();
+        if (json.success && json.data) {
+          return NextResponse.json({
+            success: true,
+            message: "File uploaded successfully via Multer & Cloudinary",
+            data: {
+              url: json.data.url,
+              name: json.data.originalName || file.name,
+              size: json.data.bytes || file.size,
+              type: json.data.format || file.type,
+            },
+          });
+        }
+      }
+    } catch {
+      // Fallback below
+    }
+
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 

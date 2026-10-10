@@ -12,6 +12,10 @@ export const registerSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   phone: z.string().min(7, "Please enter a valid phone number").optional().or(z.literal("")),
+  role: z.enum(["CUSTOMER", "TECHNICIAN"]).optional().default("CUSTOMER"),
+  skills: z.array(z.string()).optional(),
+  hourlyRate: z.number().optional(),
+  serviceArea: z.string().optional(),
 });
 
 export type RegisterFormData = z.infer<typeof registerSchema>;
